@@ -13,6 +13,11 @@ latlon maidenhead_locator_to_latlon( char * loc );
 
 // encode a lat-lon into a maidenhead grid square
 // precision is how many levels to encode, e.g. FN41 is 2, FN41sp is 3, etc
+// you're expected to provide a buffer that can fit the grid square, the needed size is 
+// precision*2 (and +1 for the nul terminator if you're doing that)
+//
+// TODO?: latlon_to_maidenhead_locator doesn't set that nul!
+// initialize the buffer to 0, or keep track of the string length yourself to avoid issues
 void latlon_to_maidenhead_locator( latlon in, char * maidenhead_out, int precision );
 
 //
