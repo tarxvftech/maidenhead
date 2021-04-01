@@ -1,5 +1,7 @@
 /*#define MAIDENHEAD_TESTING*/
+//enables main() and test functions
 /*#define LOUD*/
+//only useful when MAIDENHEAD_TESTING, is a little more verbose
 
 #include "maidenhead.h"
 #include "math.h"
