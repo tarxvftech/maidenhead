@@ -9,7 +9,8 @@ typedef struct latlon {
 
 
 // parse a nul terminated string like "FN41sp" to the appropriate lat-lon.
-latlon maidenhead_locator_to_latlon( char * loc );
+latlon maidenhead_to_latlon( char * loc );
+void maidenhead_to_lat_lon( char * loc, float * lat, float * lon );
 
 // encode a lat-lon into a maidenhead grid square
 // precision is how many levels to encode, e.g. FN41 is 2, FN41sp is 3, etc
@@ -18,7 +19,8 @@ latlon maidenhead_locator_to_latlon( char * loc );
 //
 // TODO?: latlon_to_maidenhead_locator doesn't set that nul!
 // initialize the buffer to 0, or keep track of the string length yourself to avoid issues
-void latlon_to_maidenhead_locator( latlon in, char * maidenhead_out, int precision );
+void latlon_to_maidenhead( latlon in, char * maidenhead_out, int precision );
+void lat_lon_to_maidenhead( float lat, float lon, char * maidenhead_out, int precision );
 
 //
 float distance_between_maidenhead_locators_in_subsquares(char*a,char*b);

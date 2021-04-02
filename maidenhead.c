@@ -37,7 +37,29 @@ int maidenhead_precision_char(int precision){
     }
     return c;
 }
-latlon maidenhead_locator_to_latlon( char * loc ){
+void maidenheadgriddiv(float thing, float maxthingval, int maxprecision, char * out ){
+    //expects "out" to be 2*maxprecision in size
+    //determines whether this thing is lat or lon based on "maxthingval"
+    //supports extended arbitrary precision by continuing the 10, 24 pattern
+    int ifwearelat = maxthingval==180;
+    for(int i =0; i < maxprecision; i++ ){
+        int offset;
+        int t;
+        int div = maidenhead_precision_div(i);
+        char c = maidenhead_precision_char(i);
+        maxthingval /= div;
+        t = thing/maxthingval;
+        thing -= t*maxthingval;
+        offset = ifwearelat? i*2+1: i*2;
+        out[offset] = t + c;
+    }
+    return;
+}
+
+
+
+
+latlon maidenhead_to_latlon( char * loc ){
     latlon out;
 
     out.lat = 0;
@@ -66,32 +88,30 @@ latlon maidenhead_locator_to_latlon( char * loc ){
 
     return out;
 }
-void maidenheadgriddiv(float thing, float maxthingval, int maxprecision, char * out ){
-    //expects "out" to be 2*maxprecision in size
-    //determines whether this thing is lat or lon based on "maxthingval"
-    //supports extended arbitrary precision by continuing the 10, 24 pattern
-    int ifwearelat = maxthingval==180;
-    for(int i =0; i < maxprecision; i++ ){
-        int offset;
-        int t;
-        int div = maidenhead_precision_div(i);
-        char c = maidenhead_precision_char(i);
-        maxthingval /= div;
-        t = thing/maxthingval;
-        thing -= t*maxthingval;
-        offset = ifwearelat? i*2+1: i*2;
-        out[offset] = t + c;
-    }
-    return;
+void maidenhead_to_lat_lon( char * loc, float * lat, float * lon ){
+    latlon xy = maidenhead_to_latlon( loc );
+    *lat = xy.lat;
+    *lon = xy.lon;
 }
-void latlon_to_maidenhead_locator( latlon in, char * maidenhead_out, int precision ){
+
+
+void latlon_to_maidenhead( latlon in, char * maidenhead_out, int precision ){
     float lon = in.lon + 180;
     float lat = in.lat + 90;
     maidenheadgriddiv(lon, 360, precision ,maidenhead_out);
     maidenheadgriddiv(lat, 180, precision ,maidenhead_out);
-    return;
 }
-float distance_between_maidenhead_locators_in_km(char*a,char*b){
+void lat_lon_to_maidenhead( float lat, float lon, char * maidenhead_out, int precision ){
+    latlon xy;
+    xy.lat = lat;
+    xy.lon = lon;
+    latlon_to_maidenhead( xy, maidenhead_out, precision);
+}
+
+
+
+
+float distance_between_maidenheads_in_km(char*a,char*b){
     return 0;
 }
 float m_sqrt(float in){
@@ -103,7 +123,7 @@ float m_sqrt(float in){
         root = (root + in / root) / 2;
     return root;
 }
-float distance_between_maidenhead_locators_in_subsquares(char*a,char*b){
+float distance_between_maidenheads_in_subsquares(char*a,char*b){
     //only supports down to subsquares
     /*
     -------------------------------------------
@@ -148,8 +168,8 @@ float distance_between_maidenhead_locators_in_subsquares(char*a,char*b){
     return m_sqrt( (float)latsubsquarediff*latsubsquarediff + (float)lonsubsquarediff*lonsubsquarediff);
 
 }
-int maidenhead_locators_are_adjacent( char *a, char *b){
-    return distance_between_maidenhead_locators_in_subsquares(a,b) < 2; 
+int maidenheads_are_adjacent( char *a, char *b){
+    return distance_between_maidenheads_in_subsquares(a,b) < 2; 
     //includes diagonals: if we dont want diagonals change to == 1
 }
 
@@ -166,29 +186,29 @@ int maidenhead_locators_are_adjacent( char *a, char *b){
 #ifdef MAIDENHEAD_TESTING
 int test_maidenhead_distances(char * a,char * b,float expected_subsquare_distance){
     int errors = 0;
-    float d = distance_between_maidenhead_locators_in_subsquares(a,b);
+    float d = distance_between_maidenheads_in_subsquares(a,b);
     if( d != expected_subsquare_distance ){
         printf("\nError in gridsubsquare distance calculation for %s and %s\n\tGot %f but expected %f\n",a,b,d,expected_subsquare_distance);
         errors += 1;
     }
-    if( expected_subsquare_distance < 2 && ! maidenhead_locators_are_adjacent(a,b) ){
+    if( expected_subsquare_distance < 2 && ! maidenheads_are_adjacent(a,b) ){
         printf("Error in gridsubsquare adjacency calculation\n\tGot false but expected true\n");
         errors += 1;
     }
-    if( expected_subsquare_distance >= 2 && maidenhead_locators_are_adjacent(a,b) ){
+    if( expected_subsquare_distance >= 2 && maidenheads_are_adjacent(a,b) ){
         printf("Error in gridsubsquare adjacency calculation\n\tGot true but expected false\n");
         errors += 1;
     }
 #ifdef LOUD
-    printf("%s to %s: %f subsquares expected %f\n\tadjacent: %s\n",a,b,d,expected_subsquare_distance,maidenhead_locators_are_adjacent(a,b)?"true":"false");
+    printf("%s to %s: %f subsquares expected %f\n\tadjacent: %s\n",a,b,d,expected_subsquare_distance,maidenheads_are_adjacent(a,b)?"true":"false");
 #endif
     return errors;
 }
-int test_latlon_to_maidenhead_locator(latlon in, char * expected_maidenhead ){
+int test_latlon_to_maidenhead(latlon in, char * expected_maidenhead ){
     int errors = 0;
     char * out = malloc(strlen(expected_maidenhead) +1 );
     int levels = strlen(expected_maidenhead)/2;
-    latlon_to_maidenhead_locator( in, out, levels );
+    latlon_to_maidenhead( in, out, levels );
     if( strlen(out) != 2*levels ){
         printf("Incorrect precision for latlon to maidenhead where expected_maidenhead == %s\n"
                 "\tGot %s\n",expected_maidenhead,out);
@@ -205,18 +225,18 @@ int test_latlon_to_maidenhead_locator(latlon in, char * expected_maidenhead ){
     return errors;
 }
 
-int latlon_within_maidenhead_locator(latlon in, char * loc){
+int latlon_within_maidenhead(latlon in, char * loc){
     return 0;
 }
-int maidenhead_locator_within_maidenhead_square(){
+int maidenhead_within_maidenhead_square(){
     return 0;
 }
-int test_maidenhead_locator_to_latlon(char * in, latlon expected ){
+int test_maidenhead_to_latlon(char * in, latlon expected ){
     int errors = 0;
-    latlon out = maidenhead_locator_to_latlon(in);
-    printf("test_maidenhead_locator_to_latlon not implemented yet\n");
+    latlon out = maidenhead_to_latlon(in);
+    printf("test_maidenhead_to_latlon not implemented yet\n");
     return 1;
-    if( ! latlon_within_maidenhead_locator(expected, in) ){
+    if( ! latlon_within_maidenhead(expected, in) ){
     }
 
 #ifdef LOUD
@@ -249,22 +269,22 @@ void test(){
     latlon in;
     in.lat = 0;
     in.lon = 0;
-    errors += test_latlon_to_maidenhead_locator(in,"JJ00");
-    errors += test_latlon_to_maidenhead_locator(in,"JJ00aa");
+    errors += test_latlon_to_maidenhead(in,"JJ00");
+    errors += test_latlon_to_maidenhead(in,"JJ00aa");
     in.lon = -71.32457;
     in.lat = 42.65148;
-    errors += test_latlon_to_maidenhead_locator(in,"FN42");
-    errors += test_latlon_to_maidenhead_locator(in,"FN42ip");
-    errors += test_latlon_to_maidenhead_locator(in,"FN42ip16");
-    errors += test_latlon_to_maidenhead_locator(in,"FN42ip16bi");
+    errors += test_latlon_to_maidenhead(in,"FN42");
+    errors += test_latlon_to_maidenhead(in,"FN42ip");
+    errors += test_latlon_to_maidenhead(in,"FN42ip16");
+    errors += test_latlon_to_maidenhead(in,"FN42ip16bi");
     printf("\n\n");
-    errors += test_maidenhead_locator_to_latlon("JJ00",in);
-    errors += test_maidenhead_locator_to_latlon("FN",in);
-    errors += test_maidenhead_locator_to_latlon("FN42",in);
-    errors += test_maidenhead_locator_to_latlon("FN42ip",in);
-    errors += test_maidenhead_locator_to_latlon("FN42ip16",in);
-    errors += test_maidenhead_locator_to_latlon("FN42ip16bi",in);
-    errors += test_maidenhead_locator_to_latlon("FN42ip16bi25js47",in);
+    errors += test_maidenhead_to_latlon("JJ00",in);
+    errors += test_maidenhead_to_latlon("FN",in);
+    errors += test_maidenhead_to_latlon("FN42",in);
+    errors += test_maidenhead_to_latlon("FN42ip",in);
+    errors += test_maidenhead_to_latlon("FN42ip16",in);
+    errors += test_maidenhead_to_latlon("FN42ip16bi",in);
+    errors += test_maidenhead_to_latlon("FN42ip16bi25js47",in);
         
     printf("\nCompleted tests with %d errors.\n",errors);
 }
