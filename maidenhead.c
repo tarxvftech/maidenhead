@@ -12,8 +12,13 @@
 #include <stdlib.h>
 #endif
 
-//TODO: write a function to generate adjacent gridsquares by mangling an existing one
+#define SHOULD_MATCH 1
+#define DONT_MATCH   0
 
+//TODO: write a function to generate adjacent gridsquares by mangling an existing one
+int roughly_equal(double in1, double in2, double tolerance){
+    return fabs(in1 - in2) < tolerance;
+}
 
 int maidenhead_precision_div(int precision){
     int div;
@@ -37,7 +42,7 @@ int maidenhead_precision_char(int precision){
     }
     return c;
 }
-void maidenheadgriddiv(float thing, float maxthingval, int maxprecision, char * out ){
+void maidenheadgriddiv(double thing, double maxthingval, int maxprecision, char * out ){
     //expects "out" to be 2*maxprecision in size
     //determines whether this thing is lat or lon based on "maxthingval"
     //supports extended arbitrary precision by continuing the 10, 24 pattern
@@ -76,10 +81,10 @@ latlon maidenhead_to_latlon( char * loc ){
         int charval = loc[i] - c;
         if( i%2 == 0){
             londiv *= div;
-            out.lon += ((float)charval / (float)londiv) * 360;
+            out.lon += ((double)charval / (double)londiv) * 360;
         } else {
             latdiv *= div;
-            out.lat += ((float)charval / (float)latdiv) * 180;
+            out.lat += ((double)charval / (double)latdiv) * 180;
         }
 
     }
@@ -88,7 +93,7 @@ latlon maidenhead_to_latlon( char * loc ){
 
     return out;
 }
-void maidenhead_to_lat_lon( char * loc, float * lat, float * lon ){
+void maidenhead_to_lat_lon( char * loc, double * lat, double * lon ){
     latlon xy = maidenhead_to_latlon( loc );
     *lat = xy.lat;
     *lon = xy.lon;
@@ -96,12 +101,12 @@ void maidenhead_to_lat_lon( char * loc, float * lat, float * lon ){
 
 
 void latlon_to_maidenhead( latlon in, char * maidenhead_out, int precision ){
-    float lon = in.lon + 180;
-    float lat = in.lat + 90;
+    double lon = in.lon + 180;
+    double lat = in.lat + 90;
     maidenheadgriddiv(lon, 360, precision ,maidenhead_out);
     maidenheadgriddiv(lat, 180, precision ,maidenhead_out);
 }
-void lat_lon_to_maidenhead( float lat, float lon, char * maidenhead_out, int precision ){
+void lat_lon_to_maidenhead( double lat, double lon, char * maidenhead_out, int precision ){
     latlon xy;
     xy.lat = lat;
     xy.lon = lon;
@@ -111,19 +116,19 @@ void lat_lon_to_maidenhead( float lat, float lon, char * maidenhead_out, int pre
 
 
 
-float distance_between_maidenheads_in_km(char*a,char*b){
+double distance_between_maidenheads_in_km(char*a,char*b){
     return 0;
 }
-float m_sqrt(float in){
+double m_sqrt(double in){
     //https://stackoverflow.com/a/29019938
-    float root =in/3;
+    double root =in/3;
     int i;
     if (in <= 0) return 0;
     for (i=0; i<32; i++)
         root = (root + in / root) / 2;
     return root;
 }
-float distance_between_maidenheads_in_subsquares(char*a,char*b){
+double distance_between_maidenheads_in_subsquares(char*a,char*b){
     //only supports down to subsquares
     /*
     -------------------------------------------
@@ -165,7 +170,7 @@ float distance_between_maidenheads_in_subsquares(char*a,char*b){
     if( lonsubsquarediff >= 2160 ){
         lonsubsquarediff -= 4320; //double check this in morning
     }
-    return m_sqrt( (float)latsubsquarediff*latsubsquarediff + (float)lonsubsquarediff*lonsubsquarediff);
+    return m_sqrt( (double)latsubsquarediff*latsubsquarediff + (double)lonsubsquarediff*lonsubsquarediff);
 
 }
 int maidenheads_are_adjacent( char *a, char *b){
@@ -184,10 +189,10 @@ int maidenheads_are_adjacent( char *a, char *b){
 
 
 #ifdef MAIDENHEAD_TESTING
-int test_maidenhead_distances(char * a,char * b,float expected_subsquare_distance){
+int test_maidenhead_distances(char * a,char * b,double expected_subsquare_distance){
     int errors = 0;
-    float d = distance_between_maidenheads_in_subsquares(a,b);
-    if( d != expected_subsquare_distance ){
+    double d = distance_between_maidenheads_in_subsquares(a,b);
+    if( ! roughly_equal(d,expected_subsquare_distance, 1e-9) ){
         printf("\nError in gridsubsquare distance calculation for %s and %s\n\tGot %f but expected %f\n",a,b,d,expected_subsquare_distance);
         errors += 1;
     }
@@ -204,9 +209,11 @@ int test_maidenhead_distances(char * a,char * b,float expected_subsquare_distanc
 #endif
     return errors;
 }
-int test_latlon_to_maidenhead(latlon in, char * expected_maidenhead ){
+int test_latlon_to_maidenhead(latlon in, char * expected_maidenhead, int expect_match ){
     int errors = 0;
-    char * out = malloc(strlen(expected_maidenhead) +1 );
+    int len = strlen(expected_maidenhead);
+    char * out = malloc( len+1 );
+    memset(out, 0, len+1); 
     int levels = strlen(expected_maidenhead)/2;
     latlon_to_maidenhead( in, out, levels );
     if( strlen(out) != 2*levels ){
@@ -214,8 +221,8 @@ int test_latlon_to_maidenhead(latlon in, char * expected_maidenhead ){
                 "\tGot %s\n",expected_maidenhead,out);
         errors++;
     }
-    if( strncmp(out,expected_maidenhead, levels*2) != 0 ){
-        printf("Bad maidenhead out for latlon to maidenhead where expected_maidenhead == %s\n",expected_maidenhead);
+    if( (strncmp(out,expected_maidenhead, levels*2) == 0) != expect_match){
+        printf("Bad maidenhead out for latlon to maidenhead where expected_maidenhead %s %s\n",expect_match?"==":"!=", expected_maidenhead);
         errors++;
     }
 #ifdef LOUD
@@ -225,23 +232,58 @@ int test_latlon_to_maidenhead(latlon in, char * expected_maidenhead ){
     return errors;
 }
 
+int between(double needle, double hay, double stack){
+    int result = (hay <= needle && needle <= stack ) ||
+        (stack <= needle && needle <= hay);
+    return result;
+}
+int latlon_between( latlon needle, latlon hay, latlon stack ){
+    return between( needle.lat, hay.lat, stack.lat ) && 
+            between( needle.lon, hay.lon, stack.lon );
+}
 int latlon_within_maidenhead(latlon in, char * loc){
-    return 0;
+    latlon c1 = {0,0}; //corner1
+    latlon c2 = {0,0}; //corner2
+
+    int len = strlen(loc);
+    char * mh = malloc( len+1 );
+    memset(mh, 0, len+1); 
+
+
+    //generate lat and lon pairs for each of the adjacent squares
+    //(the lat/lon of which are actually a specific corner)
+    //
+    //you don't actually have to generate all of them of course, just
+    //the far corner
+    memcpy(mh, loc, len);
+    mh[len-1]++;
+    mh[len-2]++;
+    c1 = maidenhead_to_latlon(loc);
+    c2 = maidenhead_to_latlon(mh);
+#ifdef LOUD
+    printf("c1 %f, %f %s\n", c1.lat, c1.lon, loc);
+    printf("in %f, %f \n",   in.lat, in.lon);
+    printf("c2 %f, %f %s\n", c2.lat, c2.lon, mh);
+#endif
+    //then check out incoming latlon against those latlons
+    int result = latlon_between( in, c1, c2);
+#ifdef LOUD
+    printf("%s\n\n", result?"yes":"no");
+#endif
+
+    
+    return result;
 }
 int maidenhead_within_maidenhead_square(){
     return 0;
 }
-int test_maidenhead_to_latlon(char * in, latlon expected ){
+int test_maidenhead_to_latlon(char * in, latlon expected, int expect_match ){
     int errors = 0;
     latlon out = maidenhead_to_latlon(in);
-    printf("test_maidenhead_to_latlon not implemented yet\n");
-    return 1;
-    if( ! latlon_within_maidenhead(expected, in) ){
+    if( latlon_within_maidenhead(expected, in) != expect_match ){
+        printf("maidenhead to latlon: %s -> %f,%f, target %f,%f %s expected within bounds\n",in, out.lat, out.lon, expected.lat, expected.lon, expect_match?"":"not" );
+        errors++;
     }
-
-#ifdef LOUD
-    printf("maidenhead to latlon: %s -> %f,%f, target %f,%f expected within bounds\n",in, out.lat, out.lon, expected.lat, expected.lon );
-#endif
     return errors;
 }
 void test(){
@@ -264,35 +306,35 @@ void test(){
 
     errors += test_maidenhead_distances( "AA00aa", "AR09ax", 4319); 
         //max diff in latitude, but double check in morning
-    printf("\n\n");
     
     latlon in;
     in.lat = 0;
     in.lon = 0;
-    errors += test_latlon_to_maidenhead(in,"JJ00");
-    errors += test_latlon_to_maidenhead(in,"JJ00aa");
+    errors += test_latlon_to_maidenhead(in,"JJ00", SHOULD_MATCH);
+    errors += test_latlon_to_maidenhead(in,"JJ00aa", SHOULD_MATCH);
     in.lon = -71.32457;
     in.lat = 42.65148;
-    errors += test_latlon_to_maidenhead(in,"FN42");
-    errors += test_latlon_to_maidenhead(in,"FN42ip");
-    errors += test_latlon_to_maidenhead(in,"FN42ip16");
-    errors += test_latlon_to_maidenhead(in,"FN42ip16bi");
-    printf("\n\n");
-    errors += test_maidenhead_to_latlon("JJ00",in);
-    errors += test_maidenhead_to_latlon("FN",in);
-    errors += test_maidenhead_to_latlon("FN42",in);
-    errors += test_maidenhead_to_latlon("FN42ip",in);
-    errors += test_maidenhead_to_latlon("FN42ip16",in);
-    errors += test_maidenhead_to_latlon("FN42ip16bi",in);
-    errors += test_maidenhead_to_latlon("FN42ip16bi25js47",in);
+    errors += test_latlon_to_maidenhead(in,"FN42", SHOULD_MATCH);
+    errors += test_latlon_to_maidenhead(in,"FN42ip", SHOULD_MATCH);
+    errors += test_latlon_to_maidenhead(in,"FN42ip16", SHOULD_MATCH);
+    errors += test_latlon_to_maidenhead(in,"FN42ip16bi", SHOULD_MATCH);
+
+    errors += test_maidenhead_to_latlon("JJ00",in, DONT_MATCH);
+    errors += test_maidenhead_to_latlon("FN",in, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42",in, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42ip",in, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42ip16",in, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42ip16bi",in, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42ip16bi25js47",in, DONT_MATCH); //beyond double representation
         
     printf("\nCompleted tests with %d errors.\n",errors);
 }
 
-void main(){
+int main(){
     /*
     (gcc -DLOUD -DMAIDENHEAD_TESTING maidenhead.c -o maidenhead -lm;./maidenhead)
     */
     test();
+    return 0;
 }
 #endif
