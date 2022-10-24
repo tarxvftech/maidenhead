@@ -36,23 +36,22 @@ def maidenhead_precision_char(precision : int) -> int:
 
     return c
 
-def maidenhead_grid_div(thing : float, maxthingval : float, maxprecision : int, out : str):
+def maidenhead_grid_div(thing : float, maxthingval : float, maxprecision : int, out : list):
     # expects "out" to be 2*maxprecision in size
     # determines whether this thing is lat or lon based on "maxthingval"
     # supports extended arbitrary precision by continuing the 10, 24 pattern
-    ifwearelat = maxthingval==180
+    ifwearelat = int(maxthingval==180)
+    # out = list(out)
     for i in range(0, maxprecision):
-        offset, t = 0, 0
+        # offset = 0
+        # t = 0
         div, c = maidenhead_precision_div(i), maidenhead_precision_char(i)
         maxthingval = maxthingval/div
-        t = thing/maxthingval
+        t = int(thing/maxthingval)
         thing -= t*maxthingval
-        offset = (i*2)+1 if ifwearelat else i*2
+        offset = i*2+1 if ifwearelat else i*2
         # Python string-array-string
-        out = list(out)
         out[offset] = chr(int(t)+ord(c))
-        out = "".join(out)
-    return out
 
 def maidenhead_to_latlon(loc : str) -> latlon:
     out = latlon(0.0,0.0)
@@ -82,17 +81,17 @@ def maidenhead_to_lat_lon(loc : str, lat : float, lon : float):
     lat = xy.lat
     lon = xy.lon
 
-def latlon_to_maidenhead(x : latlon, maidenhead_out : str, precision: int):
-    lon = x.lon + 180
-    lat = x.lat + 90
-    out = maidenhead_out
-    out = maidenhead_grid_div(lon, 360, precision, maidenhead_out)
-    out = maidenhead_grid_div(lat, 180, precision, maidenhead_out)
-    return out
+def latlon_to_maidenhead(x : latlon, maidenhead_out : list, precision: int):
+    lon_temp = x.lon + 180
+    lat_temp = x.lat + 90
+    maidenhead_grid_div(lon_temp, 360, precision, maidenhead_out)
+    maidenhead_grid_div(lat_temp, 180, precision, maidenhead_out)
 
-def lat_lon_to_maidenhead(lat : float, lon : float, maidenhead_out : str, precision : int):
-    xy = latlon( lat, lon )
-    latlon_to_maidenhead(xy, maidenhead_out, precision)
+    return ''.join(maidenhead_out)
+
+# def lat_lon_to_maidenhead(lat : float, lon : float, maidenhead_out : str, precision : int):
+#     xy = latlon( lat, lon )
+#     latlon_to_maidenhead(xy, maidenhead_out, precision)
 
 
 def distance_between_maidenheads_in_km(a : str, b : str):
@@ -169,7 +168,7 @@ def test_maidenhead_distances(a : str,b : str,expected_subsquare_distance : floa
     if( not roughly_equal(d,expected_subsquare_distance, 1e-09) ):
         print(f"\nError in gridsubsquare distance calculation for {a} and {b}\n\tGot {d} but expected {expected_subsquare_distance}\n")
         errors += 1
-    if( expected_subsquare_distance < 2 and not maidenheads_are_adjacent(a,b) ):
+    if( expected_subsquare_distance < 2 and (not maidenheads_are_adjacent(a,b)) ):
         print("Error in gridsubsquare adjacency calculation\n\tGot false but expected true\n")
         errors += 1
     if( expected_subsquare_distance >= 2 and maidenheads_are_adjacent(a,b) ):
@@ -183,11 +182,9 @@ def test_maidenhead_distances(a : str,b : str,expected_subsquare_distance : floa
 
 def test_latlon_to_maidenhead(x : latlon, expected_maidenhead : str, expect_match : int ):
     errors = 0
-    out = ''.join(['0']*len(expected_maidenhead))
+    out = ['0']*len(expected_maidenhead)
     levels = len(expected_maidenhead)//2
-    print("before->",out)
     out = latlon_to_maidenhead( x, out, levels )
-    print("After->",out)
     if( len(out) != 2*levels ):
         print(f"Incorrect precision for latlon to maidenhead where expected_maidenhead == {expected_maidenhead}\n"
                 "\tGot {out}\n",expected_maidenhead,out)
@@ -198,7 +195,7 @@ def test_latlon_to_maidenhead(x : latlon, expected_maidenhead : str, expect_matc
         errors+=1
     print(f"latlon to maidenhead: {x.lat}, {x.lon} -> {out}, expected {expected_maidenhead}\n")
 
-    return errors
+    return errors;
 
 def between(needle : float, hay : float, stack : float) -> int:
     result = (hay<=needle and needle<=stack) or (stack<=needle and needle<=hay)
@@ -219,7 +216,7 @@ def latlon_within_maidenhead(x : latlon, loc : str):
     #     //
     # you don't actually have to generate all of them of course, just
     # the far corner
-    mh = loc+mh[n:] # porting memcpy(mh, loc, len)
+    mh = loc+mh[n:] # porting memcpy(mh, loc, len);
     mh_list = list(mh)
     mh_list[n-1] = chr(ord(mh_list[n-1])+1)# mh[len-1]++
     mh_list[n-2] = chr(ord(mh_list[n-2])+1)# mh[len-2]++
@@ -227,12 +224,12 @@ def latlon_within_maidenhead(x : latlon, loc : str):
 
     c1 = maidenhead_to_latlon(loc)
     c2 = maidenhead_to_latlon(mh)
-    print(f"c1 {c1.lat}, {c1.lon} {loc}\n")
-    print(f"in {c1.lat}, {c1.lon} \n")
-    print(f"c2 {c2.lat}, {c2.lon} {mh}\n")
+    print(f"c1 {c1.lat}, {c1.lon} {loc}\n");
+    print(f"in {c1.lat}, {c1.lon} \n");
+    print(f"c2 {c2.lat}, {c2.lon} {mh}\n");
 
     # then check out incoming latlon against those latlons
-    result = latlon_between( x, c1, c2)
+    result = latlon_between( x, c1, c2);
 
     s = "yes" if result else "no"
     print(f"{s}\n\n")
@@ -252,44 +249,46 @@ def test_maidenhead_to_latlon(x : str, expected : latlon, expect_match :int ):
     return errors
 
 def test():
-    errors = 0
-    errors += test_maidenhead_distances( "FN42aa", "FN42ab", 1)
-    errors += test_maidenhead_distances( "FN42aa", "FN42ba", 1)
-    errors += test_maidenhead_distances( "FN42aa", "FN42bb", 2**0.5)
-    errors += test_maidenhead_distances( "FN42ca", "FN42aa", 2)
-    errors += test_maidenhead_distances( "FN43aa", "FN42aa", 24)
-    errors += test_maidenhead_distances( "FN42aa", "FN42aa", 0)
+    errors = 0;
+    print("test1", errors)
+    errors += test_maidenhead_distances( "FN42aa", "FN42ab", 1);
+    errors += test_maidenhead_distances( "FN42aa", "FN42ba", 1);
+    errors += test_maidenhead_distances( "FN42aa", "FN42bb", 2**0.5);
+    errors += test_maidenhead_distances( "FN42ca", "FN42aa", 2);
+    errors += test_maidenhead_distances( "FN43aa", "FN42aa", 24);
+    errors += test_maidenhead_distances( "FN42aa", "FN42aa", 0);
 
     # longitude wrap-around, double check me!
-    errors += test_maidenhead_distances( "AA00aa", "IA00aa", 1920) 
-    errors += test_maidenhead_distances( "AA00aa", "IA90xa", 2159) 
-    errors += test_maidenhead_distances( "AA00aa", "JA00aa", 2160) # dead opposite long, if I'm right
-    errors += test_maidenhead_distances( "AA00aa", "JA00ba", 2159) 
-    errors += test_maidenhead_distances( "AA00aa", "KA00aa", 1920) 
-    errors += test_maidenhead_distances( "AA00aa", "RA90xa", 1) 
-    errors += test_maidenhead_distances( "AA00aa", "RA90wa", 2) 
+    errors += test_maidenhead_distances( "AA00aa", "IA00aa", 1920); 
+    errors += test_maidenhead_distances( "AA00aa", "IA90xa", 2159); 
+    errors += test_maidenhead_distances( "AA00aa", "JA00aa", 2160); # dead opposite long, if I'm right
+    errors += test_maidenhead_distances( "AA00aa", "JA00ba", 2159); 
+    errors += test_maidenhead_distances( "AA00aa", "KA00aa", 1920); 
+    errors += test_maidenhead_distances( "AA00aa", "RA90xa", 1); 
+    errors += test_maidenhead_distances( "AA00aa", "RA90wa", 2); 
 
-    errors += test_maidenhead_distances( "AA00aa", "AR09ax", 4319) 
+    errors += test_maidenhead_distances( "AA00aa", "AR09ax", 4319); 
     # max diff in latitude, but double check in morning
-    
+    print("test2", errors)
     x = latlon(0.0, 0.0)
-    errors += test_latlon_to_maidenhead(x,"JJ00", SHOULD_MATCH)
-    errors += test_latlon_to_maidenhead(x,"JJ00aa", SHOULD_MATCH)
-    x.lon = -71.32457
-    x.lat = 42.65148
-    errors += test_latlon_to_maidenhead(x,"FN42", SHOULD_MATCH)
-    errors += test_latlon_to_maidenhead(x,"FN42ip", SHOULD_MATCH)
-    errors += test_latlon_to_maidenhead(x,"FN42ip16", SHOULD_MATCH)
-    errors += test_latlon_to_maidenhead(x,"FN42ip16bi", SHOULD_MATCH)
+    errors += test_latlon_to_maidenhead(x,"JJ00", SHOULD_MATCH);
+    errors += test_latlon_to_maidenhead(x,"JJ00aa", SHOULD_MATCH);
+    x.lon = -71.32457;
+    x.lat = 42.65148;
+    errors += test_latlon_to_maidenhead(x,"FN42", SHOULD_MATCH);
+    errors += test_latlon_to_maidenhead(x,"FN42ip", SHOULD_MATCH);
+    errors += test_latlon_to_maidenhead(x,"FN42ip16", SHOULD_MATCH);
+    errors += test_latlon_to_maidenhead(x,"FN42ip16bi", SHOULD_MATCH);
 
-    errors += test_maidenhead_to_latlon("JJ00",x, DONT_MATCH)
-    errors += test_maidenhead_to_latlon("FN",x, SHOULD_MATCH)
-    errors += test_maidenhead_to_latlon("FN42",x, SHOULD_MATCH)
-    errors += test_maidenhead_to_latlon("FN42ip",x, SHOULD_MATCH)
-    errors += test_maidenhead_to_latlon("FN42ip16",x, SHOULD_MATCH)
-    errors += test_maidenhead_to_latlon("FN42ip16bi",x, SHOULD_MATCH)
-    errors += test_maidenhead_to_latlon("FN42ip16bi25js47",x, DONT_MATCH) # beyond double representation
-        
+    print("test3", errors)
+    errors += test_maidenhead_to_latlon("JJ00",x, DONT_MATCH);
+    errors += test_maidenhead_to_latlon("FN",x, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42",x, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42ip",x, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42ip16",x, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42ip16bi",x, SHOULD_MATCH);
+    errors += test_maidenhead_to_latlon("FN42ip16bi25js47",x, DONT_MATCH); # beyond double representation
+    print("test4", errors)
     print(f"\nCompleted tests with {errors} errors.\n")
 
 test()
