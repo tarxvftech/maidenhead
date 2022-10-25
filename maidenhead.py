@@ -1,5 +1,8 @@
+import math # for test_maidenhead_to_latlon() @ Line 242
+
 SHOULD_MATCH = 1
 DONT_MATCH = 0
+LOUD = 0
 
 class latlon():
     def __init__(self, lat : float, lon : float):
@@ -54,7 +57,7 @@ def maidenhead_grid_div(thing : float, maxthingval : float, maxprecision : int, 
         out[offset] = chr(int(t)+ord(c))
 
 def maidenhead_to_latlon(loc : str) -> latlon:
-    out = latlon(0.0,0.0)
+    out = latlon(0,0)
 
     loclen = len(loc)
 
@@ -88,11 +91,6 @@ def latlon_to_maidenhead(x : latlon, maidenhead_out : list, precision: int):
     maidenhead_grid_div(lat_temp, 180, precision, maidenhead_out)
 
     return ''.join(maidenhead_out)
-
-# def lat_lon_to_maidenhead(lat : float, lon : float, maidenhead_out : str, precision : int):
-#     xy = latlon( lat, lon )
-#     latlon_to_maidenhead(xy, maidenhead_out, precision)
-
 
 def distance_between_maidenheads_in_km(a : str, b : str):
     return 0
@@ -164,7 +162,6 @@ Code above, tests below
 def test_maidenhead_distances(a : str,b : str,expected_subsquare_distance : float) -> int:
     errors = 0
     d = distance_between_maidenheads_in_subsquares(a,b)
-    print("debug ",d)
     if( not roughly_equal(d,expected_subsquare_distance, 1e-09) ):
         print(f"\nError in gridsubsquare distance calculation for {a} and {b}\n\tGot {d} but expected {expected_subsquare_distance}\n")
         errors += 1
@@ -176,7 +173,8 @@ def test_maidenhead_distances(a : str,b : str,expected_subsquare_distance : floa
         errors += 1
 
     s = "true" if maidenheads_are_adjacent(a,b) else "false"
-    print(f"{a} to {b}: {d} subsquares expected {expected_subsquare_distance}\n\tadjacent: {s}\n")
+    if(LOUD):
+        print(f"{a} to {b}: {d} subsquares expected {expected_subsquare_distance}\n\tadjacent: {s}\n")
 
     return errors
 
@@ -193,7 +191,8 @@ def test_latlon_to_maidenhead(x : latlon, expected_maidenhead : str, expect_matc
         s = "==" if expect_match else "!="
         print(f"Bad maidenhead out for latlon to maidenhead where expected_maidenhead {s} {expected_maidenhead}\n")
         errors+=1
-    print(f"latlon to maidenhead: {x.lat}, {x.lon} -> {out}, expected {expected_maidenhead}\n")
+    if(LOUD):
+        print(f"latlon to maidenhead: {x.lat}, {x.lon} -> {out}, expected {expected_maidenhead}\n")
 
     return errors;
 
@@ -224,15 +223,17 @@ def latlon_within_maidenhead(x : latlon, loc : str):
 
     c1 = maidenhead_to_latlon(loc)
     c2 = maidenhead_to_latlon(mh)
-    print(f"c1 {c1.lat}, {c1.lon} {loc}\n");
-    print(f"in {c1.lat}, {c1.lon} \n");
-    print(f"c2 {c2.lat}, {c2.lon} {mh}\n");
+    if(LOUD):
+        print(f"c1 {c1.lat}, {c1.lon} {loc}\n");
+        print(f"in {c1.lat}, {c1.lon} \n");
+        print(f"c2 {c2.lat}, {c2.lon} {mh}\n");
 
     # then check out incoming latlon against those latlons
     result = latlon_between( x, c1, c2);
 
     s = "yes" if result else "no"
-    print(f"{s}\n\n")
+    if(LOUD):
+        print(f"{s}\n\n")
     return result
 
 def maidenhead_within_maidenhead_square():
@@ -242,6 +243,17 @@ def test_maidenhead_to_latlon(x : str, expected : latlon, expect_match :int ):
     errors = 0
     out = maidenhead_to_latlon(x)
     val = latlon_within_maidenhead(expected, x)
+    # Can be used For values that are very close but not equal, since below if statement
+    # checks for EXACT match, so it counts an error even when values are
+    # Acceptably close. For e.g.
+    # 42.65148 & 42.650000000000006 are not equal so it counts as an error, but they are close.
+    # If required, uncomment lines 251-256, and comment 257-260, or vice versa
+    # lat_close = math.isclose(out.lat, expected.lat, abs_tol=0.8)
+    # lon_close = math.isclose(out.lon, expected.lon, abs_tol=0.8)
+    # if(not lat_close and lon_close):
+    #     s = "" if expect_match else "not"
+    #     print(f"maidenhead to latlon: {x} -> {out.lat},{out.lon}, target {expected.lat},{expected.lon} {s} expected within bounds\n")
+    #     errors+=1
     if( val != expect_match ):
         s = "" if expect_match else "not"
         print(f"maidenhead to latlon: {x} -> {out.lat},{out.lon}, target {expected.lat},{expected.lon} {s} expected within bounds\n")
@@ -249,8 +261,7 @@ def test_maidenhead_to_latlon(x : str, expected : latlon, expect_match :int ):
     return errors
 
 def test():
-    errors = 0;
-    print("test1", errors)
+    errors = 0
     errors += test_maidenhead_distances( "FN42aa", "FN42ab", 1);
     errors += test_maidenhead_distances( "FN42aa", "FN42ba", 1);
     errors += test_maidenhead_distances( "FN42aa", "FN42bb", 2**0.5);
@@ -269,7 +280,6 @@ def test():
 
     errors += test_maidenhead_distances( "AA00aa", "AR09ax", 4319); 
     # max diff in latitude, but double check in morning
-    print("test2", errors)
     x = latlon(0.0, 0.0)
     errors += test_latlon_to_maidenhead(x,"JJ00", SHOULD_MATCH);
     errors += test_latlon_to_maidenhead(x,"JJ00aa", SHOULD_MATCH);
@@ -280,7 +290,6 @@ def test():
     errors += test_latlon_to_maidenhead(x,"FN42ip16", SHOULD_MATCH);
     errors += test_latlon_to_maidenhead(x,"FN42ip16bi", SHOULD_MATCH);
 
-    print("test3", errors)
     errors += test_maidenhead_to_latlon("JJ00",x, DONT_MATCH);
     errors += test_maidenhead_to_latlon("FN",x, SHOULD_MATCH);
     errors += test_maidenhead_to_latlon("FN42",x, SHOULD_MATCH);
@@ -288,7 +297,7 @@ def test():
     errors += test_maidenhead_to_latlon("FN42ip16",x, SHOULD_MATCH);
     errors += test_maidenhead_to_latlon("FN42ip16bi",x, SHOULD_MATCH);
     errors += test_maidenhead_to_latlon("FN42ip16bi25js47",x, DONT_MATCH); # beyond double representation
-    print("test4", errors)
+
     print(f"\nCompleted tests with {errors} errors.\n")
 
 test()
