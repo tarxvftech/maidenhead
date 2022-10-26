@@ -16,5 +16,6 @@ License
 SSPL, or contact for other options.
 
 Written by tarxvf (then mach327) for the md380tools project and never used.
-
 Split out 2021 by tarxvf for use in OpenRTX and other projects.
+
+Python port by kabiirk@github, thank you!
