@@ -3,14 +3,14 @@
 /*#define LOUD*/
 //only useful when MAIDENHEAD_TESTING, is a little more verbose
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 #include "maidenhead.h"
 #include "math.h"
 #include "string.h"
 
-#ifdef MAIDENHEAD_TESTING
-#include <stdio.h>
-#include <stdlib.h>
-#endif
 
 #define SHOULD_MATCH 1
 #define DONT_MATCH   0
@@ -330,11 +330,48 @@ void test(){
     printf("\nCompleted tests with %d errors.\n",errors);
 }
 
-int main(){
-    /*
-    (gcc -DLOUD -DMAIDENHEAD_TESTING maidenhead.c -o maidenhead -lm;./maidenhead)
-    */
-    test();
+int main(int argc, char **argv){
+    //Use standard arg parsing, please fill out main (and any includes)
+    //for executing the following functions on demand from the CLI:
+    //test();
+    //void maidenhead_to_lat_lon( char * loc, double * lat, double * lon );
+    //void lat_lon_to_maidenhead( double lat, double lon, char * maidenhead_out, int precision );
+    int opt;
+    char *loc = NULL;
+    double lat = 0.0, lon = 0.0;
+    char maidenhead_out[64] = {0};
+    int precision = 3; //has to be specified first
+    while ((opt = getopt(argc, argv, "p:Tg:l:")) != -1) {
+        switch (opt) {
+            case 'T':
+                test();
+                break;
+            case 'p':
+                sscanf(optarg, "%d",&precision);
+                break;
+            case 'g':
+                loc = optarg;
+                maidenhead_to_lat_lon(loc, &lat, &lon);
+                printf("%lf,%lf\n",lat,lon);
+                break;
+            case 'l':
+                // For this example, assume input is "lat,lon"
+                if (sscanf(optarg, "%lf,%lf", &lat, &lon) != 2) {
+                    fprintf(stderr, "Invalid format for -l. Expected format: lat,lon\n");
+                    return 1;
+                }
+                lat_lon_to_maidenhead(lat, lon, maidenhead_out, precision);
+                printf("%s\n",maidenhead_out);
+                break;
+            default:
+                fprintf(stderr, "Usage: %s [-T] [-g loc] [-l lat,lon]\n", argv[0]);
+                return 1;
+        }
+    }
+
     return 0;
 }
+/*
+(gcc -DLOUD -DMAIDENHEAD_TESTING maidenhead.c -o maidenhead -lm;./maidenhead)
+*/
 #endif

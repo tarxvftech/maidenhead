@@ -1,4 +1,6 @@
+import sys
 import math # for test_maidenhead_to_latlon() @ Line 242
+import argparse
 
 SHOULD_MATCH = 1
 DONT_MATCH = 0
@@ -39,12 +41,12 @@ def maidenhead_precision_char(precision : int) -> int:
 
     return c
 
-def maidenhead_grid_div(thing : float, maxthingval : float, maxprecision : int, out : list):
+def maidenhead_grid_div(thing : float, maxthingval : float, maxprecision : int):
     # expects "out" to be 2*maxprecision in size
     # determines whether this thing is lat or lon based on "maxthingval"
     # supports extended arbitrary precision by continuing the 10, 24 pattern
     ifwearelat = int(maxthingval==180)
-    # out = list(out)
+    out = []
     for i in range(0, maxprecision):
         # offset = 0
         # t = 0
@@ -55,6 +57,7 @@ def maidenhead_grid_div(thing : float, maxthingval : float, maxprecision : int, 
         offset = i*2+1 if ifwearelat else i*2
         # Python string-array-string
         out[offset] = chr(int(t)+ord(c))
+    return out
 
 def maidenhead_to_latlon(loc : str) -> latlon:
     out = latlon(0,0)
@@ -84,11 +87,12 @@ def maidenhead_to_lat_lon(loc : str, lat : float, lon : float):
     lat = xy.lat
     lon = xy.lon
 
-def latlon_to_maidenhead(x : latlon, maidenhead_out : list, precision: int):
-    lon_temp = x.lon + 180
-    lat_temp = x.lat + 90
-    maidenhead_grid_div(lon_temp, 360, precision, maidenhead_out)
-    maidenhead_grid_div(lat_temp, 180, precision, maidenhead_out)
+def latlon_to_maidenhead(lat:float, lon:float, precision: int):
+    lon_temp = lon + 180
+    lat_temp = lat + 90
+    lon_out = maidenhead_grid_div(lon_temp, 360, precision)
+    lat_out = maidenhead_grid_div(lat_temp, 180, precision)
+    import pdb; pdb.set_trace()
 
     return ''.join(maidenhead_out)
 
@@ -300,4 +304,30 @@ def test():
 
     print(f"\nCompleted tests with {errors} errors.\n")
 
-test()
+def main():
+    parser = argparse.ArgumentParser(
+        description="Convert between Maidenhead grid squares and latitude/longitude."
+    )
+
+    parser.add_argument("-g", "--gridsquare", type=str, help="Convert gridsquare to latitude and longitude.")
+    parser.add_argument("-l", "--latlon", type=str, help="Convert latitude,longitude to gridsquare.")
+    parser.add_argument("-p", "--precision", type=int, default=3, help="Set precision for gridsquare conversion.")
+    parser.add_argument("-T", "--test", action="store_true", help="Run tests.")
+
+    args = parser.parse_args()
+    
+    if args.test:
+        test()
+    elif args.gridsquare:
+        lat, lon = maidenhead_to_latlon(args.gridsquare)
+        print(f"{lat},{lon}")
+    elif args.latlon:
+        lat, lon = map(float, args.latlon.split(","))
+        ll = latlon(lat,lon)
+        grid = latlon_to_maidenhead(ll, args.precision)
+        print(f"{grid}")
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()
