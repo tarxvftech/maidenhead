@@ -29,18 +29,16 @@ class GridSquare {
     }
 
     static maidenheadGridDiv(thing, maxthingval, maxprecision) {
-        let out = new Array(2 * maxprecision).fill('');
-        const ifwearelat = maxthingval === 180;
+	let out = "";
         for (let i = 0; i < maxprecision; i++) {
             const div = GridSquare.maidenheadPrecisionDiv(i);
             const c = GridSquare.maidenheadPrecisionChar(i);
             maxthingval /= div;
-            const t = Math.floor(thing / maxthingval);
+            let t = Math.trunc(thing / maxthingval);
             thing -= t * maxthingval;
-            const offset = ifwearelat ? i * 2 + 1 : i * 2;
-            out[offset] = String.fromCharCode(t + c.charCodeAt(0));
+            out += String.fromCharCode(t + c.charCodeAt(0));
         }
-        return out.join('');
+        return out;
     }
 
     static maidenheadToLatLon(loc) {
@@ -68,11 +66,14 @@ class GridSquare {
     }
 
     static latLonToMaidenhead(lat, lon, precision) {
-        lon += 180;
-        lat += 90;
-        let maidenheadOut = GridSquare.maidenheadGridDiv(lon, 360, precision);
-        maidenheadOut += GridSquare.maidenheadGridDiv(lat, 180, precision);
-        return maidenheadOut;
+        const lonPart = GridSquare.maidenheadGridDiv(lon+180, 360, precision);
+        const latPart = GridSquare.maidenheadGridDiv(lat+90, 180, precision);
+	let out = '';
+	for( let i = 0; i < precision; i++ ){
+		out += lonPart[i];
+		out += latPart[i];
+	}
+	return out;
     }
 
     static distanceBetweenMaidenheadsInSubSquares(a, b) {
@@ -141,3 +142,6 @@ class GridSquare {
 }
 
 module.exports = GridSquare;
+
+//console.log(GridSquare.maidenheadGridDiv(-71.32457+180, 360, 3));
+//console.log(GridSquare.maidenheadGridDiv(42.65148+90, 180, 3));

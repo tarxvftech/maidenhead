@@ -25,17 +25,15 @@ def maidenhead_precision_char(precision):
 
 
 def maidenheadgriddiv(thing, maxthingval, maxprecision):
-    out = [''] * (2 * maxprecision)
-    ifwearelat = maxthingval == 180
+    out = ""
     for i in range(maxprecision):
         div = maidenhead_precision_div(i)
         c = maidenhead_precision_char(i)
         maxthingval /= div
         t = int(thing / maxthingval)
         thing -= t * maxthingval
-        offset = i * 2 + 1 if ifwearelat else i * 2
-        out[offset] = chr(t + ord(c))
-    return ''.join(out)
+        out += chr(t + ord(c))
+    return out
 
 
 def maidenhead_to_latlon(loc):
@@ -63,8 +61,7 @@ def maidenhead_to_latlon(loc):
 def latlon_to_maidenhead(lat, lon, precision):
     lon += 180
     lat += 90
-    maidenhead_out = maidenheadgriddiv(lon, 360, precision)
-    maidenhead_out += maidenheadgriddiv(lat, 180, precision)
+    maidenhead_out = ''.join(''.join(pair) for pair in zip(maidenheadgriddiv(lon, 360, precision), maidenheadgriddiv(lat, 180, precision)))
     return maidenhead_out
 
 
@@ -135,12 +132,12 @@ def main():
 
     if args.grid:
         lat, lon = maidenhead_to_latlon(args.grid)
-        print(f"Latitude: {lat}, Longitude: {lon}")
+        print(f"{lat},{lon}")
 
     if args.latlon:
         lat, lon = map(float, args.latlon.split(','))
         maidenhead = latlon_to_maidenhead(lat, lon, args.precision)
-        print(f"Maidenhead: {maidenhead}")
+        print(maidenhead)
 
 if __name__ == "__main__":
     main()

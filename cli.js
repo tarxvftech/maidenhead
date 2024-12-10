@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const GridSquare = require('./maidenhead');
+const GridSquare = require('./maidenhead.js');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 
@@ -26,11 +26,12 @@ const argv = yargs(hideBin(process.argv))
 
 if (argv.grid) {
     const [lat, lon] = GridSquare.maidenheadToLatLon(argv.grid);
-    console.log(`Latitude: ${lat}, Longitude: ${lon}`);
+    console.log(`${lat},${lon}`);
 }
 
 if (argv.latlon) {
     const [lat, lon] = argv.latlon.split(',').map(Number);
     const maidenhead = GridSquare.latLonToMaidenhead(lat, lon, argv.precision);
-    console.log(`Maidenhead: ${maidenhead}`);
+    console.log(`${maidenhead}`);
 }
+
