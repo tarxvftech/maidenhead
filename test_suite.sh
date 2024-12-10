@@ -27,7 +27,7 @@ make
 run_tests "./maidenhead"
 
 # Run tests for Python
-run_tests "python3 maidenhead_new.py"
+run_tests "python3 maidenhead.py"
 
 # Run tests for JavaScript
 run_tests "node cli.js"
